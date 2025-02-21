@@ -6,7 +6,16 @@ const chatRoutes = require('./routes/chatRoutes');
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// Replace with your actual website URL
+const allowedOrigins = ["https://sophiaai.vercel.app/", "http://localhost:3000/"];
+
+app.use(cors({
+    origin: allowedOrigins,
+    methods: "GET,POST,PUT,DELETE",
+    credentials: true 
+}));
+
 app.use(express.json());
 
 app.use('/api', chatRoutes);
