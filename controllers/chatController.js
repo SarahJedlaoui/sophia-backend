@@ -52,53 +52,58 @@ async function respondToRelationshipQuestion(req, res) {
     }
 }
 async function respondToAskAi(req, res) {
-    const { question } = req.body;
+    const { conversation } = req.body; // Get full conversation history
 
-    if (!question) {
-        return res.status(400).json({ error: 'Question is required.' });
+    if (!conversation || !Array.isArray(conversation)) {
+        return res.status(400).json({ error: "Conversation history is required and must be an array." });
     }
 
-    const instructions = `
-    You are a knowledgeable AI assistant that provides helpful responses based on the user's question. 
-        Ensure your response is clear and direct answers user questions. 
-        Your response must be a valid JSON object in this format:
+    const messages = conversation.map((chat) => ({
+        role: chat.user ? "user" : "assistant",
+        content: chat.text,
+    }));
+
+    // System instructions
+    messages.unshift({
+        role: "system",
+        content: `
+        You are Sophia, a helpful AI assistant that remembers the conversation and provides relevant responses.
+        Your response must be formatted as:
         {
           "answer": "Your AI-generated response."
         }
-    `;
+        `,
+    });
 
     try {
         const response = await axios.post(
-            'https://api.openai.com/v1/chat/completions',
+            "https://api.openai.com/v1/chat/completions",
             {
-                model: 'gpt-4-turbo',  // **✅ Upgraded to GPT-4 Turbo**
-                messages: [
-                    { role: 'system', content: instructions },
-                    { role: 'user', content: question }
-                ],
+                model: "gpt-4-turbo",
+                messages: messages,
                 max_tokens: 500,
             },
             {
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                     Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
                 },
             }
         );
 
         const rawText = response.data.choices[0]?.message?.content;
-        
+
         let cleanedText;
         try {
-            cleanedText = JSON.parse(rawText); // Ensure JSON format
+            cleanedText = JSON.parse(rawText);
         } catch (error) {
-            cleanedText = { answer: rawText }; // Fallback if parsing fails
+            cleanedText = { answer: rawText }; 
         }
 
         return res.json(cleanedText);
     } catch (error) {
-        console.error('Error processing AI response:', error.message);
-        return res.status(500).json({ error: 'Failed to generate response.' });
+        console.error("Error processing AI response:", error.response?.data || error.message);
+        return res.status(500).json({ error: "Failed to generate response." });
     }
 }
 module.exports = { respondToRelationshipQuestion,respondToAskAi };
