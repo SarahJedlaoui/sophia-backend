@@ -52,10 +52,10 @@ async function respondToRelationshipQuestion(req, res) {
     }
 }
 async function respondToAskAi(req, res) {
-    const { conversation } = req.body; // Get full conversation history
+    const { conversation, assistant } = req.body; // Get conversation and assistant
 
-    if (!conversation || !Array.isArray(conversation)) {
-        return res.status(400).json({ error: "Conversation history is required and must be an array." });
+    if (!conversation || !Array.isArray(conversation) || !assistant) {
+        return res.status(400).json({ error: "Invalid request format." });
     }
 
     const messages = conversation.map((chat) => ({
@@ -63,17 +63,19 @@ async function respondToAskAi(req, res) {
         content: chat.text,
     }));
 
-    // System instructions
-    messages.unshift({
+    // Define system message dynamically based on assistant
+    let systemMessage = {
         role: "system",
         content: `
-        You are Sophia, a helpful AI assistant that remembers the conversation and provides relevant responses.
-        Your response must be formatted as:
+        You are ${assistant}, an Expert assistant who remembers conversations and provides relevant responses about everything you also could be asked about video to extract informations from it.
+        Your response must be structured as:
         {
           "answer": "Your AI-generated response."
         }
         `,
-    });
+    };
+
+    messages.unshift(systemMessage);
 
     try {
         const response = await axios.post(
@@ -92,12 +94,11 @@ async function respondToAskAi(req, res) {
         );
 
         const rawText = response.data.choices[0]?.message?.content;
-
         let cleanedText;
         try {
             cleanedText = JSON.parse(rawText);
         } catch (error) {
-            cleanedText = { answer: rawText }; 
+            cleanedText = { answer: rawText };
         }
 
         return res.json(cleanedText);
