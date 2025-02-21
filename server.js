@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 
 // Replace with your actual website URL
-const allowedOrigins = ["https://sophiaai.vercel.app/", "http://localhost:3000/"];
+const allowedOrigins = ["https://sophiaai.vercel.app/", "http://localhost:3000"];
 
 app.use(cors({
     origin: allowedOrigins,
