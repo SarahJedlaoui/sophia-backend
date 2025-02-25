@@ -1,4 +1,6 @@
 const axios = require('axios');
+const fs = require('fs');
+const pdfParse = require('pdf-parse');
 
 async function respondToRelationshipQuestion(req, res) {
     const { question } = req.body;
@@ -118,18 +120,26 @@ async function respondToComedyQuestion(req, res) {
         return res.status(400).json({ error: 'Question is required.' });
     }
 
+    // Load the PDF reference (assuming it's in your project folder)
+    const pdfPath = './pdf.pdf';
+    let pdfContent = '';
+
+    try {
+        const dataBuffer = fs.readFileSync(pdfPath);
+        const pdfData = await pdfParse(dataBuffer);
+        pdfContent = pdfData.text; // Extract text from PDF
+    } catch (error) {
+        console.error('Error reading PDF:', error);
+        return res.status(500).json({ error: 'Failed to load reference PDF.' });
+    }
+
     const instructions = `
-        انت سايف عمران، كوميدي ستاند-أب، كاتب سيناريو، وممثل تونسي.
-        معروف بالفكاهة العفوية، الكتابة القوية، والسخرية اللذيذة.
-        تجاوب على أي سؤال بالكوميديا وتونسية الدرجة مهما كانت لغة السؤال (فرنسي، إنجليزي، عربي فصيح..).
-        خلي إجاباتك مرحة، ساخرة، وعفوية، وتعطي نصائح حقيقية للمبتدئين في عالم الكوميديا!
+        انت سايف عمران، كوميدي تونسي. تجاوب على أي سؤال بطريقتك، حتى كان السؤال بالإنجليزي ولا الفرنسي، لازم الإجابة تكون باللهجة التونسية وبأسلوب فكاهي.
+
+        **إليك بعض النصائح من المرجع المرفق:**
+        ${pdfContent}
 
         **طريقة الإجابة:**
-        1. الإجابة تكون باللهجة التونسية مهما كانت لغة السؤال.
-        2. خلي فيها حسّ الدعابة متاعك وسخرية خفيفة الدم.
-        3. اعطي نصيحة عملية للمبتدئين في الستاند-أب.
-        4. الإجابة لازم تكون داخل JSON بالشكل التالي:
-
         {
           "response": "إجابة سايف عمران بطريقة مضحكة وساخرة.",
           "insight": {
@@ -145,8 +155,8 @@ async function respondToComedyQuestion(req, res) {
             {
                 model: 'gpt-3.5-turbo',
                 messages: [
-                    { role: 'system', content: 'انت سايف عمران، كوميدي تونسي. تجاوب باللهجة التونسية مهما كانت لغة السؤال. خليك مضحك وساخر وعطي نصائح عملية في الستاند-أب.' },
-                    { role: 'user', content: `سؤال المستخدم: ${question}\n\n${instructions}` }
+                    { role: 'system', content: instructions },
+                    { role: 'user', content: `سؤال المستخدم: ${question}` }
                 ],
                 max_tokens: 1000,
             },
@@ -158,14 +168,8 @@ async function respondToComedyQuestion(req, res) {
             }
         );
 
-        // Extract response and ensure it's formatted as JSON
         const rawText = response.data.choices[0]?.message?.content;
-        const cleanedText = rawText
-            .replace(/```json/g, '')
-            .replace(/```/g, '')
-            .trim();
-
-        // Ensure the response is valid JSON
+        const cleanedText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
         const jsonResponse = JSON.parse(cleanedText);
 
         res.json(jsonResponse);
