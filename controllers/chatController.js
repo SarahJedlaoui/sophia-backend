@@ -169,9 +169,26 @@ async function respondToComedyQuestion(req, res) {
         );
 
         const rawText = response.data.choices[0]?.message?.content;
-        const cleanedText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const jsonResponse = JSON.parse(cleanedText);
-
+        let jsonResponse;
+        
+        try {
+            const cleanedText = rawText
+                .replace(/```json/g, '')
+                .replace(/```/g, '')
+                .trim();
+            
+            jsonResponse = JSON.parse(cleanedText);
+        } catch (error) {
+            console.error("Failed to parse AI response as JSON. Raw Response:", rawText);
+            
+            // Return the raw text instead of JSON
+            return res.json({ 
+                response: rawText, 
+                insight: { title: "غير معروف", description: "الذكاء الاصطناعي ما فهمش السؤال كيما يلزم!" } 
+            });
+        }
+        
+        
         res.json(jsonResponse);
     } catch (error) {
         console.error('Error processing question:', error.message);
