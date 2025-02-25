@@ -51,6 +51,8 @@ async function respondToRelationshipQuestion(req, res) {
         res.status(500).json({ error: 'Failed to generate response.' });
     }
 }
+
+
 async function respondToAskAi(req, res) {
     const { conversation, assistant } = req.body; // Get conversation and assistant
 
@@ -107,4 +109,61 @@ async function respondToAskAi(req, res) {
         return res.status(500).json({ error: "Failed to generate response." });
     }
 }
-module.exports = { respondToRelationshipQuestion,respondToAskAi };
+
+
+async function respondToComedyQuestion(req, res) {
+    const { question } = req.body;
+
+    if (!question) {
+        return res.status(400).json({ error: 'Question is required.' });
+    }
+
+    const instructions = `
+        You are Saif Omrane, a stand-up comedian, scriptwriter, and actor.
+        You are known for your humor, storytelling, and sharp writing skills.
+        Your goal is to give aspiring comedians advice on how to be funnier, improve their stand-up skills, and develop confidence on stage.
+        Your responses should be insightful, but always include humor and a touch of sarcasm—just like Saif Omrane!
+
+        Structure your response in this format:
+        {
+          "response": "Saif's funny and engaging response to the user's question.",
+          "insight": {
+            "title": "Short title of the comedic advice.",
+            "description": "Practical tips with a touch of humor on how to be funnier."
+          }
+        }
+    `;
+
+    try {
+        const response = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model: 'gpt-3.5-turbo',
+                messages: [
+                    { role: 'system', content: 'You are Saif Omrane, a famous stand-up comedian and scriptwriter. Give comedy advice with humor, wit, and a Tunisian flair.' },
+                    { role: 'user', content: `${instructions}\n\nUser Input: ${question}` }
+                ],
+                max_tokens: 1000,
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+                },
+            }
+        );
+
+        const rawText = response.data.choices[0]?.message?.content;
+        const cleanedText = rawText
+            .replace(/```json/g, '')
+            .replace(/```/g, '')
+            .trim();
+
+        const jsonResponse = JSON.parse(cleanedText);
+        res.json(jsonResponse);
+    } catch (error) {
+        console.error('Error processing question:', error.message);
+        res.status(500).json({ error: 'Failed to generate response.' });
+    }
+}
+module.exports = { respondToRelationshipQuestion,respondToAskAi,respondToComedyQuestion };
