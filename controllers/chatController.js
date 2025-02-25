@@ -1,6 +1,4 @@
 const axios = require('axios');
-const fs = require('fs');
-const pdfParse = require('pdf-parse');
 
 async function respondToRelationshipQuestion(req, res) {
     const { question } = req.body;
@@ -120,31 +118,18 @@ async function respondToComedyQuestion(req, res) {
         return res.status(400).json({ error: 'Question is required.' });
     }
 
-    // Load the PDF reference (assuming it's in your project folder)
-    const pdfPath = './pdf.pdf';
-    let pdfContent = '';
-
-    try {
-        const dataBuffer = fs.readFileSync(pdfPath);
-        const pdfData = await pdfParse(dataBuffer);
-        pdfContent = pdfData.text; // Extract text from PDF
-    } catch (error) {
-        console.error('Error reading PDF:', error);
-        return res.status(500).json({ error: 'Failed to load reference PDF.' });
-    }
-
     const instructions = `
-        انت سايف عمران، كوميدي تونسي. تجاوب على أي سؤال بطريقتك، حتى كان السؤال بالإنجليزي ولا الفرنسي، لازم الإجابة تكون باللهجة التونسية وبأسلوب فكاهي.
+        You are Saif Omrane, a stand-up comedian, scriptwriter, and actor.
+        You are known for your humor, storytelling, and sharp writing skills.
+        Your goal is to give aspiring comedians advice on how to be funnier, improve their stand-up skills, and develop confidence on stage.
+        Your responses should be insightful, but always include humor and a touch of sarcasm—just like Saif Omrane!
 
-        **إليك بعض النصائح من المرجع المرفق:**
-        ${pdfContent}
-
-        **طريقة الإجابة:**
+        Structure your response in this format:
         {
-          "response": "إجابة سايف عمران بطريقة مضحكة وساخرة.",
+          "response": "Saif's funny and engaging response to the user's question.",
           "insight": {
-            "title": "عنوان النصيحة الكوميدية.",
-            "description": "نصائح عملية ولكن بطريقة فكاهية على كيفاش تولّي مضحك."
+            "title": "Short title of the comedic advice.",
+            "description": "Practical tips with a touch of humor on how to be funnier."
           }
         }
     `;
@@ -155,8 +140,8 @@ async function respondToComedyQuestion(req, res) {
             {
                 model: 'gpt-3.5-turbo',
                 messages: [
-                    { role: 'system', content: instructions },
-                    { role: 'user', content: `سؤال المستخدم: ${question}` }
+                    { role: 'system', content: 'You are Saif Omrane, a famous stand-up comedian and scriptwriter. Give comedy advice with humor, wit, and a Tunisian flair.' },
+                    { role: 'user', content: `${instructions}\n\nUser Input: ${question}` }
                 ],
                 max_tokens: 1000,
             },
@@ -169,31 +154,16 @@ async function respondToComedyQuestion(req, res) {
         );
 
         const rawText = response.data.choices[0]?.message?.content;
-        let jsonResponse;
-        
-        try {
-            const cleanedText = rawText
-                .replace(/```json/g, '')
-                .replace(/```/g, '')
-                .trim();
-            
-            jsonResponse = JSON.parse(cleanedText);
-        } catch (error) {
-            console.error("Failed to parse AI response as JSON. Raw Response:", rawText);
-            
-            // Return the raw text instead of JSON
-            return res.json({ 
-                response: rawText, 
-                insight: { title: "غير معروف", description: "الذكاء الاصطناعي ما فهمش السؤال كيما يلزم!" } 
-            });
-        }
-        
-        
+        const cleanedText = rawText
+            .replace(/```json/g, '')
+            .replace(/```/g, '')
+            .trim();
+
+        const jsonResponse = JSON.parse(cleanedText);
         res.json(jsonResponse);
     } catch (error) {
         console.error('Error processing question:', error.message);
         res.status(500).json({ error: 'Failed to generate response.' });
     }
 }
-
 module.exports = { respondToRelationshipQuestion,respondToAskAi,respondToComedyQuestion };
