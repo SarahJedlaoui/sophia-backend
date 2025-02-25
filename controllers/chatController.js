@@ -125,6 +125,11 @@ async function respondToComedyQuestion(req, res) {
         خلي إجاباتك مرحة، ساخرة، وعفوية، وتعطي نصائح حقيقية للمبتدئين في عالم الكوميديا!
 
         **طريقة الإجابة:**
+        1. الإجابة تكون باللهجة التونسية مهما كانت لغة السؤال.
+        2. خلي فيها حسّ الدعابة متاعك وسخرية خفيفة الدم.
+        3. اعطي نصيحة عملية للمبتدئين في الستاند-أب.
+        4. الإجابة لازم تكون داخل JSON بالشكل التالي:
+
         {
           "response": "إجابة سايف عمران بطريقة مضحكة وساخرة.",
           "insight": {
@@ -140,8 +145,8 @@ async function respondToComedyQuestion(req, res) {
             {
                 model: 'gpt-3.5-turbo',
                 messages: [
-                    { role: 'system', content: 'انت سايف عمران، كوميدي تونسي. تجاوب على أي سؤال بطريقتك، حتى كان السؤال بالإنجليزي ولا الفرنسي، لازم الإجابة تكون باللهجة التونسية وبأسلوب فكاهي.' },
-                    { role: 'user', content: `${instructions}\n\nسؤال المستخدم: ${question}` }
+                    { role: 'system', content: 'انت سايف عمران، كوميدي تونسي. تجاوب باللهجة التونسية مهما كانت لغة السؤال. خليك مضحك وساخر وعطي نصائح عملية في الستاند-أب.' },
+                    { role: 'user', content: `سؤال المستخدم: ${question}\n\n${instructions}` }
                 ],
                 max_tokens: 1000,
             },
@@ -153,17 +158,21 @@ async function respondToComedyQuestion(req, res) {
             }
         );
 
+        // Extract response and ensure it's formatted as JSON
         const rawText = response.data.choices[0]?.message?.content;
         const cleanedText = rawText
             .replace(/```json/g, '')
             .replace(/```/g, '')
             .trim();
 
+        // Ensure the response is valid JSON
         const jsonResponse = JSON.parse(cleanedText);
+
         res.json(jsonResponse);
     } catch (error) {
         console.error('Error processing question:', error.message);
         res.status(500).json({ error: 'Failed to generate response.' });
     }
 }
+
 module.exports = { respondToRelationshipQuestion,respondToAskAi,respondToComedyQuestion };
