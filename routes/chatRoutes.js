@@ -3,7 +3,7 @@ const router = express.Router();
 const axios = require("axios");
 const dotenv = require('dotenv');
 
-const { respondToRelationshipQuestion,respondToAskAi, respondToComedyQuestion } = require('../controllers/chatController');
+const { respondToRelationshipQuestion,respondToAskAi, respondToComedyQuestion, improvGame } = require('../controllers/chatController');
 
 router.post('/respond-to-chat', respondToRelationshipQuestion);
 router.post('/ask-ai', respondToAskAi);
@@ -54,4 +54,5 @@ router.post("/ask-ai", async (req, res) => {
         res.status(500).json({ error: "Failed to generate response." });
     }
 });
+router.post('/improv-game', improvGame);
 module.exports = router;

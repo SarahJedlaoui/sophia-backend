@@ -166,4 +166,84 @@ async function respondToComedyQuestion(req, res) {
         res.status(500).json({ error: 'Failed to generate response.' });
     }
 }
-module.exports = { respondToRelationshipQuestion,respondToAskAi,respondToComedyQuestion };
+
+const SCENARIOS = [
+    "You're a detective solving a case with a talking cat as your partner.",
+    "You're a pizza delivery guy from the future, but all pizzas are now in liquid form.",
+    "You're an astronaut, but you just realized you're afraid of heights.",
+    "You're a pirate who's afraid of water. What’s your solution?",
+    "You're a superhero, but your only power is the ability to speak fluent dolphin."
+];
+
+async function improvGame(req, res) {
+    const { userInput, scenarioIndex, hint } = req.body;
+
+    // If no scenario is provided, start with a random one
+    if (scenarioIndex === undefined) {
+        const randomScenario = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+        return res.json({
+            aiResponse: `Yes, and… ${randomScenario}`,
+            scenarioIndex: SCENARIOS.indexOf(randomScenario)
+        });
+    }
+
+    // If user requests a hint, provide a suggestion
+    if (hint) {
+        return res.json({
+            aiResponse: "Yes, and… you suddenly realize your socks have superpowers!"
+        });
+    }
+
+    // Ensure user starts response with "Yes, and..."
+    if (!userInput.startsWith("Yes, and")) {
+        return res.json({
+            aiResponse: "Oops! You need to start your response with 'Yes, and…' Try again!"
+        });
+    }
+
+    try {
+        const instructions = `
+            You are playing the 'Yes, And…' improv game with the user.
+            Your responses should always build on what the user says in a humorous and creative way.
+
+            **Example:**
+            AI: "You're a pirate who's afraid of water. What’s your solution?"
+            User: "Yes, and I’ve decided my ship will only sail on land now!"
+            AI: "Yes, and your crew is questioning why they have to row on a desert."
+
+            Never end the story—always keep it going with a new humorous twist!
+            Keep responses short (1-2 sentences) and witty.
+
+            **User's Input:** "${userInput}"
+            **Scenario:** "${SCENARIOS[scenarioIndex]}"
+        `;
+
+        const openAIResponse = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model: 'gpt-3.5-turbo',
+                messages: [
+                    { role: 'system', content: instructions },
+                    { role: 'user', content: userInput }
+                ],
+                max_tokens: 100,
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+                },
+            }
+        );
+
+        const aiResponse = openAIResponse.data.choices[0]?.message?.content.trim();
+        res.json({ aiResponse });
+
+    } catch (error) {
+        console.error('Error processing improv game:', error.message);
+        res.status(500).json({ error: 'Failed to generate AI response.' });
+    }
+}
+
+
+module.exports = { respondToRelationshipQuestion,respondToAskAi,respondToComedyQuestion,improvGame };
