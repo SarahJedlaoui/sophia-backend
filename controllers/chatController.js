@@ -246,4 +246,58 @@ async function improvGame(req, res) {
 }
 
 
-module.exports = { respondToRelationshipQuestion,respondToAskAi,respondToComedyQuestion,improvGame };
+async function Contributions(req, res) {
+    try {
+        const { sectionTitle, originalContent, newContribution } = req.body;
+
+        if (!sectionTitle || !originalContent || !newContribution) {
+            return res.status(400).json({ error: "Missing required fields." });
+        }
+
+        // Construct the prompt for OpenAI
+        const prompt = `
+        You are an AI editor responsible for refining content in a collaborative article. 
+        The following is an original section and a new user contribution. Your job is to:
+        - Verify the accuracy of the new contribution.
+        - Remove any redundant or repeated content.
+        - Integrate the new contribution into the original section naturally.
+        - Maintain a clear and engaging writing style.
+
+        **Original Section:**
+        "${originalContent}"
+
+        **New Contribution:**
+        "${newContribution}"
+
+        Provide the revised and merged final section as a single paragraph.
+        `;
+
+        // Call OpenAI API
+        const response = await axios.post(
+            "https://api.openai.com/v1/chat/completions",
+            {
+                model: "gpt-3.5-turbo",
+                messages: [
+                    { role: "system", content: "You are a skilled AI editor improving user-contributed content." },
+                    { role: "user", content: prompt }
+                ],
+                max_tokens: 500,
+            },
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${OPENAI_API_KEY}`,
+                },
+            }
+        );
+
+        const finalMergedContent = response.data.choices[0]?.message?.content.trim();
+
+        res.json({ updatedSection: finalMergedContent });
+    } catch (error) {
+        console.error("Error processing contribution:", error.message);
+        res.status(500).json({ error: "Failed to process the contribution." });
+    }
+};
+
+module.exports = { respondToRelationshipQuestion,respondToAskAi,respondToComedyQuestion,improvGame, Contributions };
