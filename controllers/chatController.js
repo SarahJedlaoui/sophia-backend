@@ -276,7 +276,7 @@ async function Contributions(req, res) {
         const response = await axios.post(
             "https://api.openai.com/v1/chat/completions",
             {
-                model: "gpt-3.5-turbo",
+                model: "gpt-4-turbo",
                 messages: [
                     { role: "system", content: "You are a skilled AI editor improving user-contributed content." },
                     { role: "user", content: prompt }
@@ -286,7 +286,7 @@ async function Contributions(req, res) {
             {
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${OPENAI_API_KEY}`,
+                    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
                 },
             }
         );
