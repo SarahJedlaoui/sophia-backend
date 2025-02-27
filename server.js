@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const mongoose = require("mongoose");
 const chatRoutes = require('./routes/chatRoutes');
 
 dotenv.config();
@@ -16,6 +17,15 @@ app.use(cors({
     credentials: true 
 }));
 
+// Connect to MongoDB
+mongoose
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
+  
 app.use(express.json());
 
 app.use('/api', chatRoutes);

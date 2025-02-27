@@ -1,4 +1,7 @@
 const axios = require('axios');
+const mongoose = require("mongoose");
+const Article = require("../models/Article");
+
 
 async function respondToRelationshipQuestion(req, res) {
     const { question } = req.body;
@@ -248,9 +251,8 @@ async function improvGame(req, res) {
 
 async function Contributions(req, res) {
     try {
-        const { sectionTitle, originalContent, newContribution } = req.body;
-
-        if (!sectionTitle || !originalContent || !newContribution) {
+        const { articleId, sectionTitle, originalContent, newContribution, contributor } = req.body;
+        if (!articleId || !sectionTitle || !originalContent || !newContribution) {
             return res.status(400).json({ error: "Missing required fields." });
         }
 
@@ -293,6 +295,33 @@ async function Contributions(req, res) {
 
         const finalMergedContent = response.data.choices[0]?.message?.content.trim();
 
+        // Find the article and update it
+        let article = await Article.findById(articleId);
+
+        if (!article) {
+            return res.status(404).json({ error: "Article not found." });
+        }
+
+        // Find the section by title
+        let section = article.sections.find((s) => s.sectionTitle === sectionTitle);
+
+        if (!section) {
+            return res.status(404).json({ error: "Section not found." });
+        }
+
+        // Add the new contribution to the history
+        section.modifications.push({
+            contributor: contributor || "Anonymous",
+            addedText: newContribution,
+            finalContent: finalMergedContent,
+        });
+
+        // Update the section content with the new AI-refined version
+        section.originalContent = finalMergedContent;
+
+        // Save the updated article
+        await article.save();
+        
         res.json({ updatedSection: finalMergedContent });
     } catch (error) {
         console.error("Error processing contribution:", error.message);
@@ -300,4 +329,32 @@ async function Contributions(req, res) {
     }
 };
 
-module.exports = { respondToRelationshipQuestion,respondToAskAi,respondToComedyQuestion,improvGame, Contributions };
+async function getSectionHistory(req, res) {
+    try {
+        const { articleId, sectionTitle } = req.query;
+
+        if (!articleId || !sectionTitle) {
+            return res.status(400).json({ error: "Missing required fields." });
+        }
+
+        const article = await Article.findById(articleId);
+        if (!article) {
+            return res.status(404).json({ error: "Article not found." });
+        }
+
+        const section = article.sections.find((s) => s.sectionTitle === sectionTitle);
+        if (!section) {
+            return res.status(404).json({ error: "Section not found." });
+        }
+
+        res.json({ originalContent: section.originalContent, modifications: section.modifications });
+    } catch (error) {
+        console.error("Error fetching section history:", error);
+        res.status(500).json({ error: "Failed to fetch history." });
+    }
+}
+
+
+
+
+module.exports = { respondToRelationshipQuestion, respondToAskAi, respondToComedyQuestion, improvGame, Contributions, getSectionHistory };
