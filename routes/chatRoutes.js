@@ -135,7 +135,7 @@ router.get("/articles/:title", async (req, res) => {
 
         res.json(article);
     } catch (error) {
-        console.error("❌ Error fetching article:", error);
+        console.error("Error fetching article:", error);
         res.status(500).json({ error: "Failed to fetch the article" });
     }
 });
