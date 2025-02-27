@@ -16,18 +16,22 @@ app.use(cors({
     methods: "GET,POST,PUT,DELETE",
     credentials: true 
 }));
-
+const mongoURI = process.env.MONGODB_URI;
 // Connect to MongoDB
-mongoose
-  .connect(process.env.MONGO_URI, {
+if (!mongoURI) {
+    console.error("❌ MONGODB_URI is not set! Make sure to configure it in Heroku.");
+    process.exit(1);
+}
+
+mongoose.connect(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000,  // Timeout after 5s instead of 10s
-    socketTimeoutMS: 45000,  // Close sockets after 45s if no response
-  })
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
-  
+})
+.then(() => console.log("✅ MongoDB Connected Successfully!"))
+.catch(err => {
+    console.error("❌ MongoDB Connection Error:", err.message);
+    process.exit(1);
+});
 app.use(express.json());
 
 app.use('/api', chatRoutes);
