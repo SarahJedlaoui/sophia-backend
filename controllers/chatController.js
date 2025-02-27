@@ -1,7 +1,7 @@
 const axios = require('axios');
 const mongoose = require("mongoose");
 const Article = require("../models/Article");
-
+const { ObjectId } = mongoose.Types;
 
 async function respondToRelationshipQuestion(req, res) {
     const { question } = req.body;
@@ -249,14 +249,65 @@ async function improvGame(req, res) {
 }
 
 
+
 async function Contributions(req, res) {
     try {
-        const { articleId, sectionTitle, originalContent, newContribution, contributor } = req.body;
-        if (!articleId || !sectionTitle || !originalContent || !newContribution) {
+        console.log("🔹 Received request to /api/add-contribution");
+
+        let { articleTitle, sectionTitle, originalContent, newContribution, contributor } = req.body;
+
+        console.log("🔹 Incoming request data:", req.body);
+
+        // Check for missing fields
+        if (!articleTitle || !sectionTitle || !originalContent || !newContribution) {
+            console.error("❌ Missing required fields:", {
+                articleTitle: !!articleTitle,
+                sectionTitle: !!sectionTitle,
+                originalContent: !!originalContent,
+                newContribution: !!newContribution,
+            });
             return res.status(400).json({ error: "Missing required fields." });
         }
 
-        // Construct the prompt for OpenAI
+        console.log(`✅ Searching for article with title: "${articleTitle}"`);
+
+        // Find article by title or create a new one
+        let article = await Article.findOne({ title: articleTitle });
+
+        if (!article) {
+            console.log("❌ Article not found. Creating a new article...");
+            article = new Article({
+                title: articleTitle,
+                author: "Unknown",
+                contributors: [],
+                sections: [],
+            });
+
+            await article.save();
+            console.log("✅ New article created with title:", article.title);
+        }
+
+        console.log("✅ Article found or created. Searching for section...");
+
+        // Find the section by title
+        let sectionIndex = article.sections.findIndex((s) => s.sectionTitle === sectionTitle);
+
+        if (sectionIndex === -1) {
+            console.log("❌ Section not found. Creating a new section...");
+            article.sections.push({
+                sectionTitle: sectionTitle,
+                originalContent: originalContent,
+                modifications: [],
+            });
+
+            sectionIndex = article.sections.length - 1;
+        }
+
+        let section = article.sections[sectionIndex];
+
+        console.log("✅ Section found or created. Updating content...");
+
+        // Construct OpenAI prompt
         const prompt = `
         You are an AI editor responsible for refining content in a collaborative article. 
         The following is an original section and a new user contribution. Your job is to:
@@ -266,13 +317,15 @@ async function Contributions(req, res) {
         - Maintain a clear and engaging writing style.
 
         **Original Section:**
-        "${originalContent}"
+        "${section.originalContent}"
 
         **New Contribution:**
         "${newContribution}"
 
         Provide the revised and merged final section as a single paragraph.
         `;
+
+        console.log("🔹 Sending request to OpenAI API...");
 
         // Call OpenAI API
         const response = await axios.post(
@@ -293,41 +346,42 @@ async function Contributions(req, res) {
             }
         );
 
+        console.log("✅ OpenAI API response received successfully.");
+
         const finalMergedContent = response.data.choices[0]?.message?.content.trim();
-
-        // Find the article and update it
-        let article = await Article.findById(articleId);
-
-        if (!article) {
-            return res.status(404).json({ error: "Article not found." });
-        }
-
-        // Find the section by title
-        let section = article.sections.find((s) => s.sectionTitle === sectionTitle);
-
-        if (!section) {
-            return res.status(404).json({ error: "Section not found." });
-        }
+        console.log("🔹 Merged content from OpenAI:", finalMergedContent);
 
         // Add the new contribution to the history
         section.modifications.push({
             contributor: contributor || "Anonymous",
             addedText: newContribution,
             finalContent: finalMergedContent,
+            timestamp: new Date(),
         });
 
         // Update the section content with the new AI-refined version
         section.originalContent = finalMergedContent;
 
+        // ✅ Ensure contributor is added to the article's contributors list
+        if (contributor && !article.contributors.includes(contributor)) {
+            article.contributors.push(contributor);
+        }
+
+        console.log("🔹 Preparing to save updated article...");
+
         // Save the updated article
         await article.save();
-        
-        res.json({ updatedSection: finalMergedContent });
+
+        console.log("✅ Article updated and saved successfully.");
+        res.json({ updatedSection: finalMergedContent, articleId: article._id });
     } catch (error) {
-        console.error("Error processing contribution:", error.message);
+        console.error("❌ Error processing contribution:", error);
         res.status(500).json({ error: "Failed to process the contribution." });
     }
-};
+}
+
+
+
 
 async function getSectionHistory(req, res) {
     try {
