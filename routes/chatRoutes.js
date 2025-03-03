@@ -124,19 +124,26 @@ router.get("/articles", async (req, res) => {
 // Route to get an article by title
 router.get("/articles/:title", async (req, res) => {
     try {
-        const { title } = req.params;
+        console.log("🔹 Received request to fetch article with title:", req.params.title);
 
-        // Find the article by title (case-insensitive search)
-        const article = await Article.findOne({ title: { $regex: new RegExp(title, "i") } });
+        // Convert URL-friendly title back to normal
+        const title = req.params.title.replace(/-/g, " ");
+        console.log("🔹 Converted title for search:", title);
+
+        // Find the article (case-insensitive)
+        console.log("🔹 Searching for article in the database...");
+        const article = await Article.findOne({ title: new RegExp(`^${title}$`, "i") });
 
         if (!article) {
-            return res.status(404).json({ error: "Article not found" });
+            console.warn("❌ Article not found:", title);
+            return res.status(404).json({ error: "Article not found." });
         }
 
+        console.log("✅ Article found:", article.title);
         res.json(article);
     } catch (error) {
-        console.error("Error fetching article:", error);
-        res.status(500).json({ error: "Failed to fetch the article" });
+        console.error("❌ Error fetching article:", error);
+        res.status(500).json({ error: "Failed to fetch article." });
     }
 });
 
