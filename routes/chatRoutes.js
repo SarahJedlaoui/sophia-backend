@@ -60,7 +60,7 @@ router.post('/add-contribution', Contributions);
 // Route to create a new article
 router.post("/articles", async (req, res) => {
     try {
-        const { title, author, category ,contributors, sections } = req.body;
+        const { title, author, category ,image, contributors, sections } = req.body;
 
         // Validate required fields
         if (!title || !author || !sections ) {
@@ -78,6 +78,7 @@ router.post("/articles", async (req, res) => {
         const newArticle = new Article({
             title,
             author,
+            image,
             category,
             contributors,
             sections: sections.map(section => ({
