@@ -3,7 +3,7 @@ const router = express.Router();
 const axios = require("axios");
 const dotenv = require('dotenv');
 const Article = require("../models/Article"); 
-const { respondToRelationshipQuestion,respondToAskAi, respondToComedyQuestion, improvGame, Contributions } = require('../controllers/chatController');
+const { respondToRelationshipQuestion,respondToAskAi, respondToComedyQuestion, improvGame, Contributions,SummaryContributions } = require('../controllers/chatController');
 
 router.post('/respond-to-chat', respondToRelationshipQuestion);
 router.post('/ask-ai', respondToAskAi);
@@ -56,6 +56,7 @@ router.post("/ask-ai2", async (req, res) => {
 });
 router.post('/improv-game', improvGame);
 router.post('/add-contribution', Contributions);
+router.post('/add-contribution-summary', SummaryContributions);
 
 // Route to create a new article
 router.post("/articles", async (req, res) => {
@@ -124,6 +125,7 @@ router.get("/articles", async (req, res) => {
 //});
 
 // Route to get an article by title
+
 router.get("/articles/:title", async (req, res) => {
     try {
         console.log("🔹 Received request to fetch article with title:", req.params.title);

@@ -408,7 +408,129 @@ async function getSectionHistory(req, res) {
     }
 }
 
+async function SummaryContributions(req, res) {
+    try {
+        console.log("🔹 Received request to /api/add-contribution");
+
+        let { articleTitle, sectionTitle, newContribution, contributor } = req.body;
+
+        console.log("🔹 Incoming request data:", req.body);
+
+        // Check for missing fields
+        if (!articleTitle || !sectionTitle || !newContribution) {
+            console.error("❌ Missing required fields:", {
+                articleTitle: !!articleTitle,
+                sectionTitle: !!sectionTitle,
+                newContribution: !!newContribution,
+            });
+            return res.status(400).json({ error: "Missing required fields." });
+        }
+
+        console.log(`✅ Searching for article with title: "${articleTitle}"`);
+
+        // Find the article by title
+        let article = await Article.findOne({ title: articleTitle });
+
+        if (!article) {
+            console.log("❌ Article not found. Creating a new article...");
+            article = new Article({
+                title: articleTitle,
+                author: "Unknown",
+                contributors: [],
+                sections: [],
+            });
+
+            await article.save();
+            console.log("✅ New article created with title:", article.title);
+        }
+
+        console.log("✅ Article found or created. Searching for section...");
+
+        // Find the section by title
+        let sectionIndex = article.sections.findIndex((s) => s.sectionTitle === sectionTitle);
+
+        if (sectionIndex === -1) {
+            console.log("❌ Section not found. Creating a new section...");
+            article.sections.push({
+                sectionTitle: sectionTitle,
+                originalContent: "", // Initially empty, will be replaced by summarized contributions
+                modifications: [],
+            });
+
+            sectionIndex = article.sections.length - 1;
+        }
+
+        let section = article.sections[sectionIndex];
+
+        console.log("✅ Section found or created. Updating content...");
+
+        // Add the new contribution to the history
+        section.modifications.push({
+            contributor: contributor || "Anonymous",
+            addedText: newContribution,
+            timestamp: new Date(),
+        });
+
+        // Collect all previous contributions (ignore original content)
+        let allContributions = section.modifications.map(mod => mod.addedText).join("\n");
+
+        // Construct OpenAI prompt for summarization
+        const prompt = `
+        You are an AI summarization expert. Your job is to summarize multiple user contributions into a single, clear, and concise section.
+        
+        **User Contributions:**
+        ${allContributions}
+
+        Provide a well-structured and engaging summary that captures the key points.
+        `;
+
+        console.log("🔹 Sending request to OpenAI API for summarization...");
+
+        // Call OpenAI API to generate summarized version
+        const response = await axios.post(
+            "https://api.openai.com/v1/chat/completions",
+            {
+                model: "gpt-4-turbo",
+                messages: [
+                    { role: "system", content: "You are an expert summarizer." },
+                    { role: "user", content: prompt }
+                ],
+                max_tokens: 500,
+            },
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+                },
+            }
+        );
+
+        console.log("✅ OpenAI API response received successfully.");
+
+        const summarizedContent = response.data.choices[0]?.message?.content.trim();
+        console.log("🔹 Summarized Content:", summarizedContent);
+
+        // Store the summarized contributions as the new "originalContent"
+        section.originalContent = summarizedContent;
+
+        // ✅ Ensure contributor is added to the article's contributors list
+        if (contributor && !article.contributors.includes(contributor)) {
+            article.contributors.push(contributor);
+        }
+
+        console.log("🔹 Preparing to save updated article...");
+
+        // Save the updated article
+        await article.save();
+
+        console.log("✅ Article updated and saved successfully.");
+        res.json({ updatedSection: summarizedContent, articleId: article._id });
+    } catch (error) {
+        console.error("❌ Error processing contribution:", error);
+        res.status(500).json({ error: "Failed to process the contribution." });
+    }
+}
 
 
 
-module.exports = { respondToRelationshipQuestion, respondToAskAi, respondToComedyQuestion, improvGame, Contributions, getSectionHistory };
+module.exports = { respondToRelationshipQuestion, respondToAskAi, respondToComedyQuestion, improvGame, Contributions, getSectionHistory,SummaryContributions };
