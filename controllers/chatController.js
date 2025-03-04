@@ -468,34 +468,41 @@ async function SummaryContributions(req, res) {
         section.modifications.push({
             contributor: contributor || "Anonymous",
             addedText: newContribution,
+            finalContent: newContribution, // Store the new contribution directly
             timestamp: new Date(),
         });
 
         // Collect all previous contributions (ignore original content)
         let allContributions = section.modifications.map(mod => mod.addedText).join("\n");
 
-        // Construct OpenAI prompt for summarization
+        // Construct OpenAI prompt for **progressive summarization**
         const prompt = `
-        You are an AI summarization expert. Your job is to summarize multiple user contributions into a single, clear, and concise section.
-        
-        **User Contributions:**
+        You are an AI summarization expert. Your job is to continuously expand an evolving summary of user contributions while avoiding repetition and preserving clarity.
+
+        **Current Summary:**
+        ${section.originalContent || "No summary yet."}
+
+        **New Contribution:**
+        ${newContribution}
+
+        **Full Contribution History:**
         ${allContributions}
 
-        Provide a well-structured and engaging summary that captures the key points.
+        Please merge the new contribution into the summary **without repeating existing points**. Ensure the summary remains structured, informative, and easy to read. The summary should continuously evolve as new contributions are added.
         `;
 
-        console.log("🔹 Sending request to OpenAI API for summarization...");
+        console.log("🔹 Sending request to OpenAI API for progressive summarization...");
 
-        // Call OpenAI API to generate summarized version
+        // Call OpenAI API to generate the **expanded** summarized version
         const response = await axios.post(
             "https://api.openai.com/v1/chat/completions",
             {
                 model: "gpt-4-turbo",
                 messages: [
-                    { role: "system", content: "You are an expert summarizer." },
+                    { role: "system", content: "You are an expert summarizer who improves and expands content over time." },
                     { role: "user", content: prompt }
                 ],
-                max_tokens: 500,
+                max_tokens: 800, // Allow enough space for expansion
             },
             {
                 headers: {
@@ -507,11 +514,11 @@ async function SummaryContributions(req, res) {
 
         console.log("✅ OpenAI API response received successfully.");
 
-        const summarizedContent = response.data.choices[0]?.message?.content.trim();
-        console.log("🔹 Summarized Content:", summarizedContent);
+        const expandedSummary = response.data.choices[0]?.message?.content.trim();
+        console.log("🔹 Expanded Summary:", expandedSummary);
 
-        // Store the summarized contributions as the new "originalContent"
-        section.originalContent = summarizedContent;
+        // Store the **growing summary** in `originalContent`
+        section.originalContent = expandedSummary;
 
         // ✅ Ensure contributor is added to the article's contributors list
         if (contributor && !article.contributors.includes(contributor)) {
@@ -524,12 +531,14 @@ async function SummaryContributions(req, res) {
         await article.save();
 
         console.log("✅ Article updated and saved successfully.");
-        res.json({ updatedSection: summarizedContent, articleId: article._id });
+        res.json({ updatedSection: expandedSummary, articleId: article._id });
     } catch (error) {
         console.error("❌ Error processing contribution:", error);
         res.status(500).json({ error: "Failed to process the contribution." });
     }
 }
+
+
 
 
 

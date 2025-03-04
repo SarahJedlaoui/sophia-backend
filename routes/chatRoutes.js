@@ -85,7 +85,7 @@ router.post("/articles", async (req, res) => {
             sections: sections.map(section => ({
                 sectionTitle: section.title,
                 content: section.content,
-                originalContent: section.content,
+                originalContent: "",
                 modifications: [] // Empty contributions initially
             }))
         });

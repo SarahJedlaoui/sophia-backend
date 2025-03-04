@@ -3,10 +3,13 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const mongoose = require("mongoose");
 const chatRoutes = require('./routes/chatRoutes');
-
+const bodyParser = require("body-parser");
 dotenv.config();
 
 const app = express();
+// 🔹 Increase the request body size limit
+app.use(bodyParser.json({ limit: "50mb" })); // Increase limit for JSON payloads
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true })); // For URL-encoded data
 
 // Replace with your actual website URL
 const allowedOrigins = ["https://sophiaai.vercel.app", "http://localhost:3000"];
@@ -16,6 +19,8 @@ app.use(cors({
     methods: "GET,POST,PUT,DELETE",
     credentials: true 
 }));
+
+
 const mongoURI = process.env.MONGODB_URI;
 // Connect to MongoDB
 if (!mongoURI) {
