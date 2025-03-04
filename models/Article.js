@@ -17,8 +17,10 @@ const SectionSchema = new mongoose.Schema({
 const ArticleSchema = new mongoose.Schema({
   title: { type: String, required: true },
   author: { name: String, image: String },
+  category: [String],
   contributors: [String],
-  sections: [SectionSchema], // Each section stores its own modifications
+  timestamp: { type: Date, default: Date.now },
+  sections: [SectionSchema], 
 });
 
 module.exports = mongoose.model("Article", ArticleSchema);

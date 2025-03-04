@@ -60,10 +60,10 @@ router.post('/add-contribution', Contributions);
 // Route to create a new article
 router.post("/articles", async (req, res) => {
     try {
-        const { title, author, contributors, sections } = req.body;
+        const { title, author, category ,contributors, sections } = req.body;
 
         // Validate required fields
-        if (!title || !author || !sections) {
+        if (!title || !author || !sections ) {
             return res.status(400).json({ error: "Missing required fields." });
         }
 
@@ -78,6 +78,7 @@ router.post("/articles", async (req, res) => {
         const newArticle = new Article({
             title,
             author,
+            category,
             contributors,
             sections: sections.map(section => ({
                 sectionTitle: section.title,
