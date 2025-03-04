@@ -17,7 +17,7 @@ const SectionSchema = new mongoose.Schema({
 const ArticleSchema = new mongoose.Schema({
   title: { type: String, required: true },
   author: { name: String, image: String },
-  category: [String],
+  category: { type: String }, 
   image: { type: String }, 
   contributors: [String],
   timestamp: { type: Date, default: Date.now },
