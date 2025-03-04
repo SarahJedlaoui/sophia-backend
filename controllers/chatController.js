@@ -475,21 +475,27 @@ async function SummaryContributions(req, res) {
         // Collect all previous contributions (ignore original content)
         let allContributions = section.modifications.map(mod => mod.addedText).join("\n");
 
+
         // Construct OpenAI prompt for **progressive summarization**
         const prompt = `
-        You are an AI summarization expert. Your job is to continuously expand an evolving summary of user contributions while avoiding repetition and preserving clarity.
+            You are an AI summarization expert. Your job is to continuously expand an evolving summary of user contributions while avoiding repetition and preserving clarity.
 
-        **Current Summary:**
-        ${section.originalContent || "No summary yet."}
+            Here is the existing summary followed by a new user contribution. Please **integrate the new contribution naturally** into the summary, ensuring that the final output remains structured and concise **without repeating existing points**.
 
-        **New Contribution:**
-        ${newContribution}
+            Return only the updated summary with no labels or extra formatting.
 
-        **Full Contribution History:**
-        ${allContributions}
+            Existing Summary:
+            "${section.originalContent || "No summary yet."}"
 
-        Please merge the new contribution into the summary **without repeating existing points**. Ensure the summary remains structured, informative, and easy to read. The summary should continuously evolve as new contributions are added.
+            New Contribution:
+            "${newContribution}"
+
+            Full Contribution History:
+            "${allContributions}"
+
+            Provide the **updated summary only**, maintaining clarity and coherence.
         `;
+
 
         console.log("🔹 Sending request to OpenAI API for progressive summarization...");
 
@@ -542,4 +548,4 @@ async function SummaryContributions(req, res) {
 
 
 
-module.exports = { respondToRelationshipQuestion, respondToAskAi, respondToComedyQuestion, improvGame, Contributions, getSectionHistory,SummaryContributions };
+module.exports = { respondToRelationshipQuestion, respondToAskAi, respondToComedyQuestion, improvGame, Contributions, getSectionHistory, SummaryContributions };
